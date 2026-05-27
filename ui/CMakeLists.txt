@@ -1,44 +1,57 @@
-# Generated file, do not edit.
-# This file is used to compile the UI Project created by the Editor.
-# See `user_config.cmake` as a way to add your own source files here
+cmake_minimum_required(VERSION 3.16)
+project(watch_app C)
 
-# Only set project if this is the top-level CMakeLists.txt
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.10)
-  # can be customized
-  project(LVGLProject)
-  set(IS_TOP_LEVEL TRUE)
-else()
-  set(IS_TOP_LEVEL FALSE)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Handles giving component libraries unique names when included as subprojects.
-if(DEFINED LVGL_COMPONENT_LIB_NAME)
-  set(LIB_NAME ${LVGL_COMPONENT_LIB_NAME})
-else()
-  set(LIB_NAME lib-ui)
+add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+
+# ---------------------------------------------------------------------------
+# LVGL via FetchContent
+# ---------------------------------------------------------------------------
+include(FetchContent)
+
+set(LV_CONF_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lv_conf.h" CACHE STRING "" FORCE)
+set(LV_CONF_INCLUDE_SIMPLE ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+    lvgl
+    GIT_REPOSITORY https://github.com/lvgl/lvgl.git
+    GIT_TAG        v9.2.2
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(lvgl)
+
+# ---------------------------------------------------------------------------
+# SDL2
+# ---------------------------------------------------------------------------
+find_package(SDL2 REQUIRED)
+
+# Some SDL2 installations on macOS (Homebrew) don't set SDL2_INCLUDE_DIRS.
+if(NOT SDL2_INCLUDE_DIRS AND SDL2_INCLUDE_DIR)
+    set(SDL2_INCLUDE_DIRS ${SDL2_INCLUDE_DIR})
 endif()
 
-# This includes the generated list of .c files
-include(${CMAKE_CURRENT_LIST_DIR}/file_list_gen.cmake)
-# Include any component libraries
-include(${CMAKE_CURRENT_LIST_DIR}/component_lib_list_gen.cmake)
-# Include extra source files that the user added
-include(${CMAKE_CURRENT_LIST_DIR}/user_config.cmake)
+# ---------------------------------------------------------------------------
+# Application target
+# ---------------------------------------------------------------------------
+add_executable(watch_app
+    main.c
+    screens/stopwatch_ui.c
+)
 
-# Create the UI sources as a library
-add_library(${LIB_NAME} ${LV_EDITOR_PROJECT_SOURCES})
+target_include_directories(watch_app PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/screens
+    ${SDL2_INCLUDE_DIRS}
+)
 
-if(DEFINED LV_EDITOR_COMPONENT_LIB_LIST)
-  target_link_libraries(${LIB_NAME} PUBLIC ${LV_EDITOR_COMPONENT_LIB_LIST})
-endif()
-
-if(TARGET lvgl)
-  target_link_libraries(${LIB_NAME} PUBLIC lvgl)
-endif()
-
-# Add the project folder as include folder
-target_include_directories(${LIB_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-# Set include directories for the project This will include the LVGL includes
-target_include_directories(${LIB_NAME} PRIVATE ${COMMON_INCLUDE_DIRS})
+target_link_libraries(watch_app PRIVATE
+    lvgl
+    lvgl::examples
+    ${SDL2_LIBRARIES}
+)
